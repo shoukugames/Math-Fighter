@@ -11,7 +11,7 @@ import pygame
 from .config import BONUS_LEVEL, FPS, H, MAX_LEVEL, TITLE, W
 from .draw import QUALITY
 from .mathq import OPS
-from . import highscores, progress, save
+from . import WEB, highscores, progress, save
 from .characters import ROSTER, RYU
 
 ON_ANDROID = "ANDROID_ARGUMENT" in os.environ or hasattr(sys, "getandroidapilevel")
@@ -32,12 +32,14 @@ class Game:
         from .ui import portrait
         pygame.display.set_icon(portrait(ROSTER[0], 64))
         flags = pygame.SCALED | (pygame.FULLSCREEN if ON_ANDROID else pygame.RESIZABLE)
+        if WEB:  # a fixed-size canvas; the page scales it to fit the browser window
+            flags = 0
         self.screen = pygame.display.set_mode((W, H), flags)
         self.clock = pygame.time.Clock()
         self.save = save.load()
         from .audio import Audio  # after pygame.init so the mixer is ready
         self.audio = Audio(music_on=self.save.get("music", True))
-        self.touch = ON_ANDROID
+        self.touch = ON_ANDROID or (WEB and _has_touch_screen())
         self.seen_howto = False
         top = BONUS_LEVEL if self.bonus_unlocked else MAX_LEVEL
         level = self.save.get("level", 1)
@@ -165,10 +167,11 @@ class Game:
     def dispatch(self, ev):
         """Global keys first, everything else goes to the current scene."""
         if ev.type == pygame.QUIT:
-            self.running = False
+            self.running = WEB  # in a browser there is nothing to quit to
             self.store()
         elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_F11:
-            pygame.display.toggle_fullscreen()
+            if not WEB:
+                pygame.display.toggle_fullscreen()
         elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_m and \
                 not getattr(self.scene, "text_input", False):   # M is a letter when typing a name
             self.toggle_music()
@@ -186,18 +189,39 @@ class Game:
             if self.slow_frames > 90:
                 QUALITY["ss"] = 1
 
+    def frame(self):
+        dt = min(self.clock.tick(FPS) / 1000.0, 1 / 20)
+        for ev in pygame.event.get():
+            self.dispatch(ev)
+        t0 = time.perf_counter()
+        self.scene.update(dt)
+        self.audio.update()
+        self.scene.draw(self.screen)
+        self.watch_speed(time.perf_counter() - t0)
+        pygame.display.flip()
+
     def run(self):
         while self.running:
-            dt = min(self.clock.tick(FPS) / 1000.0, 1 / 20)
-            for ev in pygame.event.get():
-                self.dispatch(ev)
-            t0 = time.perf_counter()
-            self.scene.update(dt)
-            self.audio.update()
-            self.scene.draw(self.screen)
-            self.watch_speed(time.perf_counter() - t0)
-            pygame.display.flip()
+            self.frame()
         pygame.quit()
+
+    async def run_web(self):
+        """Browser main loop: hands control back to the page after every frame."""
+        import asyncio
+        while True:  # a web page has no "quit"; closing the tab ends the game
+            self.running = True
+            if self.screen.get_size() != (W, H):
+                self.screen = pygame.display.set_mode((W, H))  # pygbag may resize the canvas
+            self.frame()
+            await asyncio.sleep(0)
+
+
+def _has_touch_screen():
+    try:
+        import platform  # pygbag's bridge to the page
+        return int(platform.window.navigator.maxTouchPoints) > 0
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def main():

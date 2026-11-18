@@ -23,16 +23,36 @@ def _path():
     return os.path.join(data_dir(), "save.json")
 
 
+_WEB_KEY = "math-fighter/save.json"   # browser: localStorage key (files vanish with the page)
+
+
+def _web():
+    from . import WEB
+    return WEB
+
+
 def load():
     try:
-        with open(_path(), encoding="utf-8") as f:
-            data = json.load(f)
+        if _web():
+            import platform  # pygbag's bridge to the page
+            raw = platform.window.localStorage.getItem(_WEB_KEY)
+            data = json.loads(str(raw)) if raw else {}
+        else:
+            with open(_path(), encoding="utf-8") as f:
+                data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
+    except Exception:  # noqa: BLE001 - a damaged save starts fresh
         return {}
 
 
 def store(data):
+    if _web():
+        try:
+            import platform  # pygbag's bridge to the page
+            platform.window.localStorage.setItem(_WEB_KEY, json.dumps(data))
+        except Exception:  # noqa: BLE001
+            pass
+        return
     try:
         os.makedirs(data_dir(), exist_ok=True)
         tmp = _path() + ".tmp"

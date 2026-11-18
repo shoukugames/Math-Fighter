@@ -160,6 +160,22 @@ The version number lives in `mathfighter/config.py` (`__version__`). The
 .deb, Windows and Android builds all read it from there, and it is shown on
 the title screen.
 
+## Play in the browser
+
+Math Fighter also runs in a web browser, on computers, phones and tablets, with nothing to
+install: <https://shoukugames.org/play/math-fighter/> (test page). On touch screens the on-screen
+number pad and pause button appear, as on Android. Progress and scores are saved in the browser.
+
+```bash
+python3 -m pip install pygame pygbag     # plus ffmpeg on PATH (or FFMPEG=/path/to/ffmpeg)
+python3 tools/build_web.py               # -> build/web/: upload the folder as-is
+```
+
+The build composes the songs once into `web_music/` (too slow to do in a browser), then packs the
+game with [pygbag](https://pygame-web.github.io/). `main.py` starts the desktop game, or the browser
+version when run by pygbag. The `.apk` file pygbag writes is its bundle of game files, not the
+Android app.
+
 ## Running it
 
 Requires Python 3.8+ and pygame 2.

@@ -8,13 +8,12 @@ import math
 import os
 import random
 import threading
-import wave
 from array import array
 from operator import add
 
 import pygame
 
-from . import save
+from . import WEB, save
 
 RATE = 22050
 SONG_VERSION = 2   # bump when the songs change, so old cached .wav files are ignored
@@ -247,7 +246,12 @@ class Audio:
         except Exception:
             return
         self._make_sfx()
-        threading.Thread(target=self._make_music, daemon=True).start()
+        if WEB:
+            # Browsers run no Python threads and composing takes seconds: the web build ships the
+            # songs pre-made (tools/build_web.py writes web_music/<song>.ogg), loaded here.
+            self._make_music()
+        else:
+            threading.Thread(target=self._make_music, daemon=True).start()
 
     def _to_sound(self, samples):
         data = array("h")
@@ -289,6 +293,10 @@ class Audio:
                 pass
 
     def _load_song(self, key):
+        if WEB:
+            return pygame.mixer.Sound(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                                                   "web_music", f"{key}.ogg"))
+        import wave  # the browser build's Python has no wave module
         path = os.path.join(save.data_dir(), f"music-v{SONG_VERSION}-{key}.wav")
         if os.path.exists(path):
             try:
