@@ -1,0 +1,12 @@
+{
+ "_note": "Replace identity_name, publisher and publisher_display_name with the values from Partner Center (Product management -> Product identity) before uploading to the Microsoft Store.",
+ "identity_name": "ShoukuGames.MathFighter",
+ "publisher": "CN=ShoukuGamesPlaceholder",
+ "publisher_display_name": "Shouku Games",
+ "display_name": "Math Fighter",
+ "description": "An anime-style fighting game where every punch, kick and block is powered by a math question.",
+ "file_name": "MathFighter",
+ "exe_name": "MathFighter.exe",
+ "alias": "shouku-math-fighter.exe",
+ "device_capabilities": []
+}
